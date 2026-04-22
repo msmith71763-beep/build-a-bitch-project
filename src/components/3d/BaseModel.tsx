@@ -10,11 +10,14 @@ interface BaseModelProps {
   customization: CustomizationState;
 }
 
-// 2.8MB Stable Realistic Base Mesh
 const MODEL_URL = "https://raw.githubusercontent.com/PacktPublishing/Hands-On-Game-Animation-Programming/master/AllChapters/Assets/Woman.gltf";
 
 const SKIN_PRESETS: Record<string, string> = {
   caucasian: "#f2d1c9", african: "#3d2b1f", east_asian: "#f3e5ab", south_asian: "#a67b5b", latin: "#c68642",
+};
+
+const HAIR_COLORS: Record<string, string> = {
+  black: "#090909", blonde: "#e6c073", red: "#9a3324", brown: "#4b3221",
 };
 
 export default function BaseModel({ customization }: BaseModelProps) {
@@ -22,7 +25,7 @@ export default function BaseModel({ customization }: BaseModelProps) {
   const group = useRef<Group>(null);
   const { actions } = useAnimations(animations, group);
 
-  // 1. ULTRA-LIGHT MATERIAL (No Physical effects to stop crash)
+  // 1. RE-LINKED SKIN MATERIAL
   const skinColor = useMemo(() => {
      const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
      const color = new THREE.Color(base);
@@ -31,14 +34,23 @@ export default function BaseModel({ customization }: BaseModelProps) {
      return color;
   }, [customization.ethnicity.preset, customization.ethnicity.skinTone]);
 
-  // Use basic StandardMaterial - much safer for mobile
-  const skinMat = useMemo(() => new THREE.MeshStandardMaterial({
+  const skinMat = useMemo(() => new THREE.MeshPhysicalMaterial({
     color: skinColor,
-    roughness: 0.8, // Matte finish is easier on GPU
-    metalness: 0,
+    roughness: 0.45,
+    metalness: 0.05,
+    clearcoat: 0.1,
+    sheen: 0.3,
+    sheenColor: new THREE.Color("#ffdbd1"),
   }), [skinColor]);
 
-  // 2. APPLY TO MESH (No Shadows)
+  // 2. RE-LINKED HAIR MATERIAL
+  const hairColorHex = HAIR_COLORS[customization.hair.color] || HAIR_COLORS.black;
+  const hairMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: new THREE.Color(hairColorHex),
+    roughness: 0.8
+  }), [hairColorHex]);
+
+  // 3. APPLY TO MESH NODES
   useEffect(() => {
     if (!scene) return;
     scene.traverse((child) => {
@@ -46,29 +58,46 @@ export default function BaseModel({ customization }: BaseModelProps) {
         const mesh = child as THREE.Mesh;
         const name = mesh.name.toLowerCase();
 
-        // Hide Accessories
+        // Nude Mode: Hide Clothes/Glasses
         if (name.includes("glasses") || name.includes("outfit") || name.includes("top") || name.includes("bottom")) {
            mesh.visible = false;
            return;
         }
 
-        mesh.material = skinMat;
-        mesh.castShadow = false; // Turn off shadows to stop crash
-        mesh.receiveShadow = false;
+        // Color Logic
+        if (name.includes("hair")) {
+          mesh.material = hairMat;
+        } else {
+          mesh.material = skinMat;
+        }
+
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         mesh.visible = true;
       }
     });
-  }, [scene, skinMat]);
+  }, [scene, skinMat, hairMat]);
 
-  // 3. ANIMATION (Simple Idle only for stability)
+  // 4. ANIMATION CONTROL
   useEffect(() => {
-    if (actions && actions["Idle"]) {
-      // Only play Idle to keep it simple
-      actions["Idle"].reset().fadeIn(0.5).play();
+    if (actions) {
+      const poseMap: Record<string, string> = {
+        idle: "Idle",
+        catwalk: "Walking",
+        pose_1: "Lean_Left",
+        pose_2: "SitIdle",
+        dance: "Jump"
+      };
+      const target = poseMap[customization.animation.pose] || "Idle";
+      const action = actions[target] || Object.values(actions)[0];
+      if (action) {
+        Object.values(actions).forEach(a => a?.fadeOut(0.5));
+        action.reset().fadeIn(0.5).play();
+      }
     }
-  }, [actions]);
+  }, [actions, customization.animation.pose]);
 
-  // 4. ANATOMICAL SCALING
+  // 5. ANATOMICAL SCALING
   const heightScale = 0.9 + (customization.body.height / 100) * 0.15;
   const weightScale = 0.85 + (customization.body.weight / 100) * 0.3;
 
