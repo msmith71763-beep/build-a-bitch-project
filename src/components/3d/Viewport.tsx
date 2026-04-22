@@ -1,7 +1,14 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
+import { 
+  OrbitControls, 
+  Environment, 
+  ContactShadows, 
+  PerspectiveCamera,
+  Float,
+  PresentationControls
+} from "@react-three/drei";
 import BaseModel from "./BaseModel";
 import type { CustomizationState } from "@/types/customization";
 
@@ -11,48 +18,47 @@ interface ViewportProps {
 
 export default function Viewport({ customization }: ViewportProps) {
   return (
-    <div className="w-full h-full">
-      <Canvas
-        camera={{ position: [0, 0.5, 4], fov: 40 }}
-        shadows
-        gl={{ antialias: true, alpha: true }}
-      >
-        <color attach="background" args={["#10101a"]} />
-
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 10, 5]}
-          intensity={1.5}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+    <div className="w-full h-full bg-[#050505]">
+      <Canvas shadows dpr={[1, 2]}>
+        <PerspectiveCamera makeDefault position={[0, 0, 4]} fov={35} />
+        
+        {/* Cinematic Lighting */}
+        <color attach="background" args={["#050505"]} />
+        <fog attach="fog" args={["#050505", 5, 15]} />
+        
+        <ambientLight intensity={0.2} />
+        <spotLight 
+          position={[10, 10, 10]} 
+          angle={0.15} 
+          penumbra={1} 
+          intensity={2} 
+          castShadow 
         />
-        <directionalLight position={[-5, 5, -5]} intensity={0.6} color="#8b9dc3" />
-        <pointLight position={[0, 2, 2]} intensity={0.5} color="#ffd6e0" />
+        <pointLight position={[-10, -10, -10]} intensity={1} color="#4b0082" />
+        <directionalLight position={[0, 5, 5]} intensity={0.5} />
 
-        <BaseModel customization={customization} />
+        <PresentationControls
+          global
+          config={{ mass: 2, tension: 500 }}
+          snap={{ mass: 4, tension: 1500 }}
+          rotation={[0, 0.3, 0]}
+          polar={[-Math.PI / 3, Math.PI / 3]}
+          azimuth={[-Math.PI / 1.4, Math.PI / 1.4]}
+        >
+          <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+             <BaseModel customization={customization} />
+          </Float>
+        </PresentationControls>
 
         <ContactShadows
-          position={[0, -1.5, 0]}
-          opacity={0.6}
+          position={[0, -1.4, 0]}
+          opacity={0.75}
           scale={10}
-          blur={2}
-          far={4.5}
+          blur={3}
+          far={4}
         />
 
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          minDistance={1.5}
-          maxDistance={8}
-          // Allow full vertical rotation for "head to toe" visibility
-          minPolarAngle={0} 
-          maxPolarAngle={Math.PI}
-          target={[0, 0, 0]}
-          makeDefault
-        />
-
-        <Environment preset="night" />
+        <Environment preset="city" />
       </Canvas>
     </div>
   );
