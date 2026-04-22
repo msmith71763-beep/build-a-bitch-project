@@ -68,4 +68,3 @@ export default function Home() {
       <Sidebar customization={customization} onChange={handleChange} />
     </div>
   );
-}
