@@ -13,6 +13,7 @@ import type { CustomizationState } from "@/types/customization";
 
 interface ViewportProps {
   customization: CustomizationState;
+  onModelLoaded?: () => void;
 }
 
 function Loader() {
@@ -59,7 +60,7 @@ function SceneLighting() {
   );
 }
 
-export default function Viewport({ customization }: ViewportProps) {
+export default function Viewport({ customization, onModelLoaded }: ViewportProps) {
   return (
     <div className="w-full h-full bg-[#050507]">
       <Canvas
@@ -81,7 +82,7 @@ export default function Viewport({ customization }: ViewportProps) {
         <SceneLighting />
 
         <Suspense fallback={<Loader />}>
-          <BaseModel customization={customization} />
+          <BaseModel customization={customization} onLoaded={onModelLoaded} />
 
           <ContactShadows
             position={[0, -0.05, 0]}
