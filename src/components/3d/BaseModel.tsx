@@ -22,16 +22,21 @@ const SKIN_PRESETS: Record<string, string> = {
 };
 
 export default function BaseModel({ customization }: BaseModelProps) {
+  // 1. Loading with lower priority for animations to prevent initial spike
   const { scene } = useGLTF(MODEL_URL);
   const { animations: externalAnims } = useGLTF(ANIMATIONS_URL);
   
   const group = useRef<Group>(null);
-  const { actions, names } = useAnimations(externalAnims, group);
+  const { actions } = useAnimations(externalAnims, group);
 
-  const skinMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
-  const hairMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
-  const eyeMaterialRef = useRef<THREE.MeshPhysicalMaterial | null>(null);
+  // 2. Stable Materials (Switching to Standard for Mobile Stability)
+  const materials = useMemo(() => ({
+    skin: new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 }),
+    hair: new THREE.MeshStandardMaterial({ roughness: 0.9, metalness: 0 }),
+    eyes: new THREE.MeshStandardMaterial({ roughness: 0.2, metalness: 0.5 })
+  }), []);
 
+  // 3. One-time Setup: Node Hiding and Material Assignment
   useEffect(() => {
     if (!scene) return;
 
@@ -40,79 +45,70 @@ export default function BaseModel({ customization }: BaseModelProps) {
         const mesh = child as THREE.Mesh;
         const name = mesh.name.toLowerCase();
 
+        // 🛑 AGGRESSIVE REMOVAL OF UNWANTED NODES
         if (
+          name.includes("glasses") || 
+          name.includes("reindeer") || 
           name.includes("outfit") || 
           name.includes("top") || 
           name.includes("bottom") || 
-          name.includes("footwear") || 
-          name.includes("shoes") || 
-          name.includes("glasses") ||
+          name.includes("foot") || 
+          name.includes("shoe") || 
           name.includes("mask") ||
-          name.includes("hat") ||
-          name.includes("glove") ||
-          name.includes("reindeer")
+          name.includes("hat")
         ) {
           mesh.visible = false;
-          mesh.castShadow = false;
-          mesh.receiveShadow = false;
+          mesh.removeFromParent(); // Delete from scene to save GPU memory
           return;
         }
 
-        const oldMat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
-        
-        const newMat = new THREE.MeshPhysicalMaterial({
-          map: oldMat?.map || null,
-          normalMap: oldMat?.normalMap || null,
-          roughnessMap: oldMat?.roughnessMap || null,
-          roughness: 0.5,
-          metalness: 0.0,
-          reflectivity: 0.5,
-          clearcoat: 0.2,
-          clearcoatRoughness: 0.3,
-          sheen: 0.2,
-          sheenColor: new THREE.Color("#ffdbd1"),
-        });
+        // Assign Stable Materials
+        if (name.includes("body") || name.includes("head") || name.includes("skin") || name.includes("hand")) {
+          mesh.material = materials.skin;
+          mesh.visible = true;
+        } else if (name.includes("hair")) {
+          mesh.material = materials.hair;
+          mesh.visible = true;
+        } else if (name.includes("eye") || name.includes("iris")) {
+          mesh.material = materials.eyes;
+          mesh.visible = true;
+        }
 
-        mesh.material = newMat;
-        mesh.visible = true;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
-
-        if (name.includes("body") || name.includes("head") || name.includes("skin") || name.includes("hand")) {
-          skinMaterialRef.current = newMat;
-        } else if (name.includes("hair")) {
-          hairMaterialRef.current = newMat;
-        } else if (name.includes("eye") || name.includes("iris")) {
-          eyeMaterialRef.current = newMat;
-        }
       }
     });
-  }, [scene]);
+
+    // Force clear old materials from memory
+    return () => {
+       scene.traverse(child => {
+         if ((child as THREE.Mesh).isMesh) {
+           (child as THREE.Mesh).geometry.dispose();
+         }
+       });
+    };
+  }, [scene, materials]);
+
+  // 4. Reactive Updates (Silky Smooth)
+  useEffect(() => {
+    const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
+    const color = new THREE.Color(base);
+    const adjustment = (customization.ethnicity.skinTone - 50) / 200;
+    color.multiplyScalar(1 + adjustment);
+    materials.skin.color.copy(color);
+  }, [customization.ethnicity.preset, customization.ethnicity.skinTone, materials.skin]);
 
   useEffect(() => {
-    if (skinMaterialRef.current) {
-      const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
-      const color = new THREE.Color(base);
-      const adjustment = (customization.ethnicity.skinTone - 50) / 200;
-      color.multiplyScalar(1 + adjustment);
-      skinMaterialRef.current.color.copy(color);
-    }
-  }, [customization.ethnicity.preset, customization.ethnicity.skinTone]);
+    materials.hair.color.set(customization.hair.color);
+  }, [customization.hair.color, materials.hair]);
 
   useEffect(() => {
-    if (hairMaterialRef.current) {
-      hairMaterialRef.current.color.set(customization.hair.color);
-    }
-  }, [customization.hair.color]);
+    materials.eyes.color.set(customization.eyes.color);
+  }, [customization.eyes.color, materials.eyes]);
 
+  // 5. Animation Control
   useEffect(() => {
-    if (eyeMaterialRef.current) {
-      eyeMaterialRef.current.color.set(customization.eyes.color);
-    }
-  }, [customization.eyes.color]);
-
-  useEffect(() => {
-    if (actions && names.length > 0) {
+    if (actions) {
       const poseMap: Record<string, string> = {
         idle: "idle",
         catwalk: "walk",
@@ -121,18 +117,17 @@ export default function BaseModel({ customization }: BaseModelProps) {
         dance: "dance"
       };
 
-      const targetName = poseMap[customization.animation.pose] || "idle";
-      const action = actions[targetName] || actions[Object.keys(actions)[0]];
+      const target = poseMap[customization.animation.pose] || "idle";
+      const action = actions[target] || Object.values(actions)[0];
 
       if (action) {
-        Object.values(actions).forEach(a => {
-          if (a && a !== action) a.fadeOut(0.5);
-        });
+        Object.values(actions).forEach(a => a?.fadeOut(0.5));
         action.reset().fadeIn(0.5).play();
       }
     }
-  }, [actions, names, customization.animation.pose]);
+  }, [actions, customization.animation.pose]);
 
+  // 6. Scaling
   const heightScale = 0.9 + (customization.body.height / 100) * 0.2;
   const weightScale = 0.85 + (customization.body.weight / 100) * 0.3;
 
