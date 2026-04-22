@@ -30,18 +30,23 @@ export default function BaseModel({ customization }: BaseModelProps) {
   
   const skinColor = useMemo(() => getSkinColor(customization.ethnicity.preset, customization.ethnicity.skinTone), [customization.ethnicity.preset, customization.ethnicity.skinTone]);
   const hairColorValue = HAIR_COLORS[customization.hair.color] || HAIR_COLORS.black;
-  
   const heightScale = 0.85 + (customization.body.height / 100) * 0.3;
   const weightScale = 0.85 + (customization.body.weight / 100) * 0.4;
   const torsoScale: [number, number, number] = [weightScale, 1, 1];
 
   const skinMat = useMemo(() => new THREE.MeshPhysicalMaterial({
     color: skinColor,
-    roughness: 0.4,
+    roughness: 0.35, 
+    metalness: 0.05,
     clearcoat: 0.1,
-    sheen: 0.5,
+    sheen: 0.4,
     sheenColor: new THREE.Color("#ffcfc5")
   }), [skinColor]);
+
+  const hairMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: hairColorValue,
+    roughness: 0.8
+  }), [hairColorValue]);
 
   const chestSize = customization.chest.size / 15;
   const chestScale = 0.15 + (chestSize * 0.15);
@@ -53,6 +58,18 @@ export default function BaseModel({ customization }: BaseModelProps) {
     type_4: [0.05, 0.15, 0.02], type_5: [0.05, 0.12, 0.07], type_6: [0.08, 0.11, 0.04],
   };
   const currentGenScale = genitaliaScales[customization.anatomy.vaginaType] || genitaliaScales.type_1;
+
+  useFrame((state) => {
+     if (!groupRef.current) return;
+     const time = state.clock.getElapsedTime();
+     
+     if (customization.animation.pose === "idle") {
+        groupRef.current.rotation.y = Math.sin(time * 0.5) * 0.05;
+        groupRef.current.position.y = -0.25 + Math.sin(time * 1.5) * 0.01;
+     } else if (customization.animation.pose === "pose_2") {
+        groupRef.current.rotation.y = 0.2;
+     }
+  });
 
   return (
     <group ref={groupRef} scale={[heightScale, heightScale, heightScale]} position={[0, -0.25, 0]}>
@@ -74,7 +91,7 @@ export default function BaseModel({ customization }: BaseModelProps) {
       <group position={[0, 1.7, -0.02]}>
         <mesh castShadow>
           <capsuleGeometry args={[0.28 + (customization.hair.volume/100)*0.2, 0.15 + (customization.hair.length/100)*0.5, 8, 32]} />
-          <meshStandardMaterial color={hairColorValue} roughness={0.8} />
+          <primitive object={hairMat} />
         </mesh>
       </group>
 
