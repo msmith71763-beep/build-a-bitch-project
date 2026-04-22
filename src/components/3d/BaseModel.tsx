@@ -8,12 +8,12 @@ import type { CustomizationState } from "@/types/customization";
 
 interface BaseModelProps {
   customization: CustomizationState;
+  onLoaded?: () => void;
 }
 
-const MODEL_URL =
-  "https://raw.githubusercontent.com/hmthanh/3d-human-model/main/TranThiNgocTham.glb";
+const MODEL_URL = "/models/model.glb";
 
-const REMOVE_KEYWORDS = ["glasses", "outfit", "top", "bottom", "footwear"];
+const HIDE_KEYWORDS = ["glasses", "outfit", "top", "bottom", "footwear"];
 
 const SKIN_PRESETS: Record<string, string> = {
   caucasian: "#f2cfc0",
@@ -28,14 +28,6 @@ const HAIR_COLORS: Record<string, string> = {
   blonde: "#e6c073",
   red: "#9a3324",
   brown: "#4b3221",
-};
-
-const EYE_COLORS: Record<string, string> = {
-  brown: "#5c3317",
-  blue: "#4a90d9",
-  green: "#2d5a27",
-  hazel: "#8b7355",
-  gray: "#9e9e9e",
 };
 
 interface PoseConfig {
@@ -67,58 +59,11 @@ function getSkinColor(preset: string, skinTone: number): THREE.Color {
   return col;
 }
 
-function optimizeModel(
-  root: THREE.Object3D,
-  skinMat: THREE.MeshPhysicalMaterial,
-  hairMat: THREE.MeshStandardMaterial
-): void {
-  const toRemove: THREE.Object3D[] = [];
-
-  root.traverse((child) => {
-    const nameLower = child.name.toLowerCase();
-
-    if (REMOVE_KEYWORDS.some((kw) => nameLower.includes(kw))) {
-      toRemove.push(child);
-      return;
-    }
-
-    if (!(child instanceof THREE.Mesh)) return;
-
-    const materials = Array.isArray(child.material) ? child.material : [child.material];
-    for (const mat of materials) {
-      if (mat && mat instanceof THREE.Material) {
-        const stdMat = mat as THREE.MeshStandardMaterial;
-        const texProps = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "bumpMap", "displacementMap", "alphaMap"] as const;
-        for (const prop of texProps) {
-          const tex = (stdMat as unknown as Record<string, unknown>)[prop];
-          if (tex instanceof THREE.Texture) {
-            tex.dispose();
-          }
-        }
-        mat.dispose();
-      }
-    }
-
-    const isHair = nameLower.includes("hair");
-    child.material = isHair ? hairMat : skinMat;
-
-    if (child.geometry) {
-      child.geometry.computeVertexNormals();
-    }
-
-    child.castShadow = true;
-    child.receiveShadow = true;
-  });
-
-  for (const obj of toRemove) {
-    obj.removeFromParent();
-  }
-}
-
-export default function BaseModel({ customization }: BaseModelProps) {
+export default function BaseModel({ customization, onLoaded }: BaseModelProps) {
   const { scene } = useGLTF(MODEL_URL);
   const groupRef = useRef<THREE.Group>(null);
   const timeRef = useRef(0);
+  const initRef = useRef(false);
 
   const custRef = useRef(customization);
   custRef.current = customization;
@@ -138,11 +83,53 @@ export default function BaseModel({ customization }: BaseModelProps) {
     side: THREE.DoubleSide,
   }), []);
 
-  const clonedScene = useMemo(() => {
-    const clone = scene.clone(true);
-    optimizeModel(clone, skinMat, hairMat);
-    return clone;
-  }, [scene, skinMat, hairMat]);
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    scene.traverse((child) => {
+      const nameLower = child.name.toLowerCase();
+
+      if (HIDE_KEYWORDS.some((kw) => nameLower.includes(kw))) {
+        child.visible = false;
+        return;
+      }
+
+      if (!(child instanceof THREE.Mesh)) return;
+
+      child.visible = true;
+      child.frustumCulled = false;
+
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of materials) {
+        if (mat && mat instanceof THREE.Material) {
+          const stdMat = mat as THREE.MeshStandardMaterial;
+          const texProps = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "bumpMap", "displacementMap", "alphaMap"] as const;
+          for (const prop of texProps) {
+            const tex = (stdMat as unknown as Record<string, unknown>)[prop];
+            if (tex instanceof THREE.Texture) {
+              tex.dispose();
+            }
+          }
+          mat.dispose();
+        }
+      }
+
+      const isHair = nameLower.includes("hair");
+      child.material = isHair ? hairMat : skinMat;
+
+      if (child.geometry) {
+        child.geometry.computeVertexNormals();
+      }
+
+      child.castShadow = true;
+      child.receiveShadow = true;
+    });
+
+    if (onLoaded) {
+      onLoaded();
+    }
+  }, [scene, skinMat, hairMat, onLoaded]);
 
   useEffect(() => {
     return () => {
@@ -184,7 +171,7 @@ export default function BaseModel({ customization }: BaseModelProps) {
 
   return (
     <group ref={groupRef} position={[0, -0.05, 0]}>
-      <primitive object={clonedScene} />
+      <primitive object={scene} />
     </group>
   );
 }
