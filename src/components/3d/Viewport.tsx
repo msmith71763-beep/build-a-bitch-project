@@ -23,10 +23,10 @@ function Loader() {
       <div className="flex flex-col items-center gap-4 w-64">
         <div className="w-12 h-12 border-4 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
         <p className="text-[10px] text-violet-400 uppercase tracking-[0.4em] font-black text-center">
-          Initializing Realistic Human Mesh
+          Calibrating Hyper-Realistic Mesh
         </p>
         <p className="text-[9px] text-zinc-600 uppercase tracking-widest text-center">
-          Loading Shaders & Animations
+          Processing Skin Shaders & Poses
         </p>
       </div>
     </Html>
@@ -36,14 +36,23 @@ function Loader() {
 export default function Viewport({ customization }: ViewportProps) {
   return (
     <div className="w-full h-full bg-[#0a0a0c]">
-      <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, preserveDrawingBuffer: true }}>
+      <Canvas 
+        shadows 
+        dpr={1} // Lock to 1 for mobile stability to prevent crashes
+        gl={{ 
+          antialias: true, 
+          preserveDrawingBuffer: true,
+          powerPreference: 'high-performance',
+          alpha: false
+        }}
+      >
         <PerspectiveCamera makeDefault position={[0, 1.5, 4]} fov={35} />
         
         <color attach="background" args={["#0a0a0c"]} />
         <fog attach="fog" args={["#0a0a0c", 5, 20]} />
 
-        <ambientLight intensity={0.5} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+        <ambientLight intensity={0.8} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
         <directionalLight position={[-5, 5, 5]} intensity={0.5} />
 
         <Suspense fallback={<Loader />}>
