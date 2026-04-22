@@ -42,6 +42,9 @@ export default function Viewport({ customization }: ViewportProps) {
         <color attach="background" args={["#0a0a0c"]} />
         <fog attach="fog" args={["#0a0a0c", 5, 20]} />
 
+        <ambientLight intensity={0.5} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+
         <Suspense fallback={<Loader />}>
           <PresentationControls
             global
@@ -63,7 +66,7 @@ export default function Viewport({ customization }: ViewportProps) {
             far={2}
           />
           
-          <Environment preset="studio" intensity={0.5} />
+          <Environment preset="studio" />
         </Suspense>
         
         <BakeShadows />
