@@ -27,11 +27,10 @@ export default function Viewport({ customization }: ViewportProps) {
 
         <PresentationControls
           global
-          config={{ mass: 2, tension: 500 }}
-          snap={{ mass: 4, tension: 1500 }}
           rotation={[0, 0.3, 0]}
           polar={[-Math.PI / 6, Math.PI / 6]}
           azimuth={[-Math.PI / 1.4, Math.PI / 1.4]}
+          snap={true}
         >
           <Stage 
             intensity={0.5} 
