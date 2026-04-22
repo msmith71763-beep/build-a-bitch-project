@@ -10,78 +10,77 @@ interface BaseModelProps {
   customization: CustomizationState;
 }
 
-// 10.7MB Professional Scanned Human Mesh - FORCE REFRESH v6
-const MODEL_URL = "https://raw.githubusercontent.com/hmthanh/3d-human-model/main/TranThiNgocTham.glb?v=6";
+// 2.8MB Professional Realistic Base Mesh (Stable External Source)
+const MODEL_URL = "https://raw.githubusercontent.com/PacktPublishing/Hands-On-Game-Animation-Programming/master/AllChapters/Assets/Woman.gltf";
 
 const SKIN_PRESETS: Record<string, string> = {
   caucasian: "#f2d1c9", african: "#3d2b1f", east_asian: "#f3e5ab", south_asian: "#a67b5b", latin: "#c68642",
 };
 
 export default function BaseModel({ customization }: BaseModelProps) {
-  const { scene } = useGLTF(MODEL_URL);
+  const { scene, animations } = useGLTF(MODEL_URL);
   const group = useRef<Group>(null);
+  const { actions } = useAnimations(animations, group);
 
-  // Stable Optimized Skin Material
+  // 1. PHYSICAL SKIN MATERIAL
+  const skinColor = useMemo(() => {
+     const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
+     const color = new THREE.Color(base);
+     const adjustment = (customization.ethnicity.skinTone - 50) / 200;
+     color.multiplyScalar(1 + adjustment);
+     return color;
+  }, [customization.ethnicity.preset, customization.ethnicity.skinTone]);
+
   const skinMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-    roughness: 0.4,
-    metalness: 0,
+    color: skinColor,
+    roughness: 0.45,
+    metalness: 0.05,
     clearcoat: 0.1,
     sheen: 0.3,
     sheenColor: new THREE.Color("#ffdbd1"),
-  }), []);
+  }), [skinColor]);
 
-  const hairMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.8 }), []);
-
+  // 2. APPLY TO MESH
   useEffect(() => {
     if (!scene) return;
-
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
+        mesh.material = skinMat;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        
         const name = mesh.name.toLowerCase();
-
-        // 🛑 AGGRESSIVE NODE CLEANUP (REMOVE CLOTHES/GLASSES)
-        if (
-          name.includes("outfit") || 
-          name.includes("top") || 
-          name.includes("bottom") || 
-          name.includes("foot") || 
-          name.includes("shoes") || 
-          name.includes("glasses") ||
-          name.includes("mask") ||
-          name.includes("reindeer")
-        ) {
-          mesh.visible = false;
-          mesh.removeFromParent();
-          return;
-        }
-
-        // Assign High-Detail Materials
-        if (name.includes("body") || name.includes("head") || name.includes("skin") || name.includes("hand")) {
-          mesh.material = skinMat;
-          mesh.visible = true;
-        } else if (name.includes("hair")) {
-          mesh.material = hairMat;
-          mesh.visible = true;
+        // Hide anything that isn't the body
+        if (name.includes("glasses") || name.includes("outfit") || name.includes("top") || name.includes("bottom")) {
+           mesh.visible = false;
         }
       }
     });
-  }, [scene, skinMat, hairMat]);
+  }, [scene, skinMat]);
 
-  // SLIDER CONTROL: Instant 3D Updates
+  // 3. ANIMATION ENGINE
   useEffect(() => {
-    const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
-    const color = new THREE.Color(base);
-    const adjustment = (customization.ethnicity.skinTone - 50) / 200;
-    color.multiplyScalar(1 + adjustment);
-    skinMat.color.copy(color);
-  }, [customization.ethnicity.preset, customization.ethnicity.skinTone, skinMat]);
+    if (actions) {
+      const poseMap: Record<string, string> = {
+        idle: "Idle",
+        catwalk: "Walking",
+        pose_1: "Lean_Left",
+        pose_2: "SitIdle",
+        dance: "Jump"
+      };
 
-  useEffect(() => {
-    hairMat.color.set(customization.hair.color);
-  }, [customization.hair.color, hairMat]);
+      const target = poseMap[customization.animation.pose] || "Idle";
+      const action = actions[target] || Object.values(actions)[0];
 
-  // ANATOMICAL SCALING
+      if (action) {
+        Object.values(actions).forEach(a => a?.fadeOut(0.5));
+        action.reset().fadeIn(0.5).play();
+      }
+    }
+  }, [actions, customization.animation.pose]);
+
+  // 4. ANATOMICAL SCALING
   const heightScale = 0.9 + (customization.body.height / 100) * 0.15;
   const weightScale = 0.85 + (customization.body.weight / 100) * 0.3;
 
