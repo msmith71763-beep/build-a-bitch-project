@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
-import * as THREE from "white";
+import * as THREE from "three";
 import type { Group } from "three";
 import type { CustomizationState } from "@/types/customization";
 
@@ -42,10 +42,12 @@ function HighEndSkin({ color }: { color: THREE.Color }) {
 function Torso({ scale, color }: { scale: [number, number, number]; color: THREE.Color }) {
   return (
     <group position={[0, 0.6, 0]} scale={scale}>
+      {/* Ribcage area */}
       <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
         <capsuleGeometry args={[0.26, 0.45, 12, 32]} />
         <HighEndSkin color={color} />
       </mesh>
+      {/* Waist/Hips area - more sculpted */}
       <mesh position={[0, -0.15, 0]} scale={[1.1, 0.8, 0.9]} castShadow receiveShadow>
         <sphereGeometry args={[0.32, 32, 32]} />
         <HighEndSkin color={color} />
