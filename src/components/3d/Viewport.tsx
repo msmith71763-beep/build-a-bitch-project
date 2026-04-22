@@ -1,110 +1,57 @@
 "use client";
 
-import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import {
-  PerspectiveCamera,
-  OrbitControls,
-  Html,
-  ContactShadows,
-} from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import BaseModel from "./BaseModel";
 import type { CustomizationState } from "@/types/customization";
 
 interface ViewportProps {
   customization: CustomizationState;
-  onModelLoaded?: () => void;
 }
 
-function Loader() {
+export default function Viewport({ customization }: ViewportProps) {
   return (
-    <Html center>
-      <div className="flex flex-col items-center gap-4 w-64">
-        <div className="w-10 h-10 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-[10px] text-violet-400 uppercase tracking-[0.3em] font-black text-center">
-          Loading Model…
-        </p>
-      </div>
-    </Html>
-  );
-}
-
-function SceneLighting() {
-  return (
-    <>
-      <ambientLight intensity={1.8} />
-      <spotLight
-        position={[2, 5, 4]}
-        intensity={3.5}
-        angle={0.5}
-        penumbra={0.6}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-bias={-0.0005}
-      />
-      <directionalLight
-        position={[-3, 6, 2]}
-        intensity={2.8}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-far={20}
-        shadow-camera-left={-3}
-        shadow-camera-right={3}
-        shadow-camera-top={3}
-        shadow-camera-bottom={-3}
-        shadow-bias={-0.0005}
-      />
-    </>
-  );
-}
-
-export default function Viewport({ customization, onModelLoaded }: ViewportProps) {
-  return (
-    <div className="w-full h-full bg-[#050507]">
+    <div className="w-full h-full">
       <Canvas
-        dpr={1}
-        gl={{
-          antialias: true,
-          powerPreference: "high-performance",
-          alpha: false,
-          toneMapping: 4,
-          toneMappingExposure: 1.1,
-        }}
+        camera={{ position: [0, 0.5, 4], fov: 40 }}
         shadows
+        gl={{ antialias: true, alpha: true }}
       >
-        <PerspectiveCamera makeDefault position={[0, 1.2, 3.2]} fov={32} near={0.1} far={100} />
+        <color attach="background" args={["#10101a"]} />
 
-        <color attach="background" args={["#0a0a0f"]} />
-        <fog attach="fog" args={["#0a0a0f", 6, 14]} />
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[5, 10, 5]}
+          intensity={1.5}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+        />
+        <directionalLight position={[-5, 5, -5]} intensity={0.6} color="#8b9dc3" />
+        <pointLight position={[0, 2, 2]} intensity={0.5} color="#ffd6e0" />
 
-        <SceneLighting />
+        <BaseModel customization={customization} />
 
-        <Suspense fallback={<Loader />}>
-          <BaseModel customization={customization} onLoaded={onModelLoaded} />
+        <ContactShadows
+          position={[0, -1.5, 0]}
+          opacity={0.6}
+          scale={10}
+          blur={2}
+          far={4.5}
+        />
 
-          <ContactShadows
-            position={[0, -0.05, 0]}
-            opacity={0.5}
-            scale={4}
-            blur={2.5}
-            far={3}
-            color="#000020"
-          />
+        <OrbitControls
+          enablePan={true}
+          enableZoom={true}
+          minDistance={1.5}
+          maxDistance={8}
+          minPolarAngle={0}
+          maxPolarAngle={Math.PI}
+          target={[0, 0, 0]}
+          makeDefault
+        />
 
-          <OrbitControls
-            enablePan={false}
-            enableDamping
-            dampingFactor={0.08}
-            target={[0, 1, 0]}
-            minDistance={1.5}
-            maxDistance={6}
-            minPolarAngle={Math.PI * 0.15}
-            maxPolarAngle={Math.PI * 0.85}
-            makeDefault
-          />
-        </Suspense>
+        <Environment preset="night" />
       </Canvas>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useEffect } from "react";
+import { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Group } from "three";
@@ -8,7 +8,6 @@ import type { CustomizationState } from "@/types/customization";
 
 interface BaseModelProps {
   customization: CustomizationState;
-  onLoaded?: () => void;
 }
 
 const SKIN_PRESETS: Record<string, string> = {
@@ -124,17 +123,13 @@ function Legs({ skinColor }: { skinColor: THREE.Color }) {
   );
 }
 
-export default function BaseModel({ customization, onLoaded }: BaseModelProps) {
+export default function BaseModel({ customization }: BaseModelProps) {
   const groupRef = useRef<Group>(null);
   const skinColor = useMemo(() => getSkinColor(customization.ethnicity.preset, customization.ethnicity.skinTone), [customization.ethnicity.preset, customization.ethnicity.skinTone]);
   const hairColorValue = HAIR_COLORS[customization.hair.color] || HAIR_COLORS.black;
   const heightScale = 0.85 + (customization.body.height / 100) * 0.3;
-  const weightScale = 0.85 + (customization.body.weight / 100) * 0.4;
+  const weightScale = 0.85 + (customization.body.weight / 100) * 0.4; // Wide hips
   const torsoScale: [number, number, number] = [weightScale, 1, 1];
-
-  useEffect(() => {
-    if (onLoaded) onLoaded();
-  }, [onLoaded]);
 
   useFrame((_, delta) => { if (groupRef.current) groupRef.current.rotation.y += delta * 0.1; });
 

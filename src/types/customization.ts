@@ -64,7 +64,7 @@ export const DEFAULT_CUSTOMIZATION: CustomizationState = {
   eyes: { size: 50, spacing: 50, color: "green" },
   hair: { length: 60, volume: 50, style: "long_wavy", color: "red" },
   ethnicity: { preset: "caucasian", skinTone: 50 },
-  clothing: { enabled: false, type: "none" }, // Ensure default is NONE
+  clothing: { enabled: false, type: "none" },
   anatomy: { pubicHair: "natural", vaginaType: "type_2" },
   animation: { pose: "idle" },
 };
