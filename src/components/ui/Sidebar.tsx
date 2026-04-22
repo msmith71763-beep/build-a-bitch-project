@@ -38,7 +38,6 @@ interface SidebarProps {
 
 export default function Sidebar({ customization, onChange }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState("body");
-  const [collapsed, setCollapsed] = useState(false);
 
   const category = CATEGORIES.find((c) => c.id === activeCategory)!;
   const catState = customization[activeCategory as keyof CustomizationState] as Record<string, any>;
@@ -69,10 +68,6 @@ export default function Sidebar({ customization, onChange }: SidebarProps) {
     if (key) updateField(key, value);
   }
 
-  function handleReset() {
-    onChange({ ...DEFAULT_CUSTOMIZATION });
-  }
-
   function getOptionKey(): string | null {
     if (activeCategory === "chest") return "nippleType";
     if (activeCategory === "eyes") return "color";
@@ -83,47 +78,36 @@ export default function Sidebar({ customization, onChange }: SidebarProps) {
     return null;
   }
 
-  function getSelectedOption(): string {
-    if (activeCategory === "anatomy") return "";
-    const key = getOptionKey();
-    return key ? catState[key] : "";
-  }
-
   return (
-    <div
-      className={`flex flex-col h-full bg-zinc-900/95 backdrop-blur-xl border-l border-zinc-800 transition-all duration-300 ${
-        collapsed ? "w-16" : "w-80"
-      }`}
-    >
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-        {!collapsed && <h2 className="text-sm font-bold text-white uppercase tracking-widest">Customize</h2>}
-        <button onClick={() => setCollapsed(!collapsed)} className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
-          {collapsed ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-        </button>
-      </div>
-
-      <div className={`flex ${collapsed ? "flex-col" : "flex-row"} overflow-x-auto gap-1 p-2 border-b border-zinc-800 scrollbar-hide`}>
+    <div className="w-[400px] h-full bg-zinc-950/80 backdrop-blur-2xl border-l border-white/5 flex flex-col p-8 z-30">
+      {/* Category Icons */}
+      <div className="flex gap-4 mb-10 overflow-x-auto scrollbar-hide pb-2 border-b border-white/5">
         {CATEGORIES.map((cat) => {
           const Icon = ICON_MAP[cat.icon];
           const isActive = activeCategory === cat.id;
           return (
             <button
               key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); if (collapsed) setCollapsed(false); }}
-              className={`flex items-center justify-center gap-2 px-2 py-2 rounded-lg text-xs font-medium transition-all min-w-[40px] ${
-                isActive ? "bg-violet-600/20 text-violet-400 border border-violet-500/30" : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-              } ${collapsed ? "w-full" : "flex-1"}`}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`p-3 rounded-sm transition-all ${
+                isActive ? "bg-violet-600/20 text-violet-400 border border-violet-500/50" : "text-zinc-600 hover:text-zinc-300"
+              }`}
               title={cat.label}
             >
-              {Icon && <Icon size={14} />}
-              {!collapsed && <span className="truncate text-[9px]">{cat.label}</span>}
+              {Icon && <Icon size={20} />}
             </button>
           );
         })}
       </div>
 
-      {!collapsed && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+      <div className="flex-1 space-y-12">
+        <div className="space-y-1">
+          <h2 className="text-[10px] text-zinc-500 uppercase tracking-[0.3em] font-bold">Category</h2>
+          <h3 className="text-xl font-light text-white tracking-widest uppercase">{category.label}</h3>
+        </div>
+
+        {/* Sliders Area */}
+        <div className="space-y-8">
           {category.sliders.map((slider) => (
             <Slider
               key={slider.id}
@@ -135,33 +119,57 @@ export default function Sidebar({ customization, onChange }: SidebarProps) {
               onChange={(v) => updateField(slider.id, v)}
             />
           ))}
-
-          {category.options.length > 0 && (
-            <OptionGroup
-              label={activeCategory === "anatomy" ? "Vagina & Hair" : category.label}
-              options={category.options}
-              selected={getSelectedOption()}
-              onChange={handleOptionChange}
-            />
-          )}
-          
-          {activeCategory === "anatomy" && (
-            <div className="mt-2 text-[10px] text-zinc-500 space-y-1">
-              <p>Current Vagina: <span className="text-violet-400">{customization.anatomy.vaginaType}</span></p>
-              <p>Current Hair: <span className="text-violet-400">{customization.anatomy.pubicHair}</span></p>
-            </div>
-          )}
         </div>
-      )}
 
-      {!collapsed && (
-        <div className="p-4 border-t border-zinc-800">
-          <button onClick={handleReset} className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-medium transition-all">
-            <RotateCcw size={12} />
-            Reset All
-          </button>
-        </div>
-      )}
+        {/* Option Selectors Area */}
+        {category.options.length > 0 && (
+          <div className="space-y-6 pt-4">
+             <div className="flex items-center justify-between">
+                <button className="p-2 text-zinc-600 hover:text-violet-400 transition-colors"><ChevronLeft size={18} /></button>
+                <div className="text-center">
+                   <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Select Option</p>
+                   <p className="text-sm text-white font-medium tracking-wider uppercase">
+                      {category.options.find(o => o.id === (activeCategory === 'anatomy' ? customization.anatomy.vaginaType : catState[getOptionKey()!]))?.label || "None Selected"}
+                   </p>
+                </div>
+                <button className="p-2 text-zinc-600 hover:text-violet-400 transition-colors"><ChevronRight size={18} /></button>
+             </div>
+
+             <div className="grid grid-cols-2 gap-2">
+                {category.options.filter(o => !o.id.startsWith('sep_')).map((opt) => {
+                  const isSelected = activeCategory === 'anatomy' 
+                    ? (opt.id.startsWith('type_') ? customization.anatomy.vaginaType === opt.id : customization.anatomy.pubicHair === opt.id)
+                    : catState[getOptionKey()!] === opt.id;
+                  
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleOptionChange(opt.id)}
+                      className={`px-4 py-3 text-[10px] uppercase tracking-widest border transition-all ${
+                        isSelected ? "bg-violet-600/10 border-violet-500 text-violet-400" : "bg-zinc-900/50 border-white/5 text-zinc-500 hover:border-white/20"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer Actions */}
+      <div className="pt-8 mt-auto border-t border-white/5 flex gap-4">
+        <button 
+          onClick={() => onChange(DEFAULT_CUSTOMIZATION)}
+          className="flex-1 px-6 py-4 bg-zinc-900 hover:bg-zinc-800 text-[10px] text-zinc-400 uppercase tracking-[0.2em] transition-all"
+        >
+          Reset Defaults
+        </button>
+        <button className="flex-1 px-6 py-4 bg-violet-600 hover:bg-violet-500 text-[10px] text-white uppercase tracking-[0.2em] shadow-lg shadow-violet-900/20 transition-all">
+          Finalize
+        </button>
+      </div>
     </div>
   );
 }
