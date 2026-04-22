@@ -25,37 +25,29 @@ function getSkinColor(preset: string, toneValue: number) {
   return baseColor;
 }
 
-function SkinShader({ color }: { color: THREE.Color }) {
+function HumanSkin({ color }: { color: THREE.Color }) {
   return (
-    <meshPhysicalMaterial 
+    <meshStandardMaterial 
       color={color}
-      roughness={0.4}
+      roughness={0.8} // Matte finish (not a balloon)
       metalness={0.05}
-      reflectivity={0.3}
-      clearcoat={0.6}
-      clearcoatRoughness={0.2}
-      ior={1.45}
-      sheen={1}
-      sheenRoughness={0.5}
-      sheenColor={new THREE.Color("#ffffff")}
+      envMapIntensity={0.5}
     />
   );
 }
 
 function Torso({ scale, color }: { scale: [number, number, number]; color: THREE.Color }) {
   return (
-    <group position={[0, 0.6, 0]} scale={scale}>
-      <mesh position={[0, 0.35, 0]} scale={[1, 1, 0.8]} castShadow receiveShadow>
-        <capsuleGeometry args={[0.24, 0.35, 16, 32]} />
-        <SkinShader color={color} />
+    <group position={[0, 0.45, 0]} scale={scale}>
+      {/* Main Body - Combined into a more unified shape */}
+      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
+        <capsuleGeometry args={[0.26, 0.5, 20, 32]} />
+        <HumanSkin color={color} />
       </mesh>
-      <mesh position={[0, 0.1, 0]} scale={[0.85, 1, 0.7]} castShadow receiveShadow>
-        <sphereGeometry args={[0.22, 32, 32]} />
-        <SkinShader color={color} />
-      </mesh>
-      <mesh position={[0, -0.15, 0]} scale={[1.25, 0.85, 0.95]} castShadow receiveShadow>
-        <sphereGeometry args={[0.33, 32, 32]} />
-        <SkinShader color={color} />
+      {/* Hips - Widened and fused to torso */}
+      <mesh position={[0, -0.05, 0]} scale={[1.25, 0.8, 0.9]} castShadow receiveShadow>
+        <sphereGeometry args={[0.34, 32, 32]} />
+        <HumanSkin color={color} />
       </mesh>
     </group>
   );
@@ -63,34 +55,62 @@ function Torso({ scale, color }: { scale: [number, number, number]; color: THREE
 
 function Chest({ size, skinColor, torsoWeight, clothingType }: { size: number; skinColor: THREE.Color; torsoWeight: number; clothingType: string; }) {
   const normalizedSize = size / 15;
-  const chestScale = 0.14 + (normalizedSize * 0.19);
-  const zOffset = 0.18 + (normalizedSize * 0.14);
-  const yOffset = 0.84;
-  const xOffset = 0.12 + (torsoWeight - 1) * 0.12;
+  const chestScale = 0.15 + (normalizedSize * 0.2);
+  const zOffset = 0.18 + (normalizedSize * 0.12);
+  const yOffset = 0.78;
+  const xOffset = 0.13 + (torsoWeight - 1) * 0.1;
   const hasTop = clothingType !== "none";
 
   return (
     <group>
-      <mesh position={[-xOffset, yOffset, zOffset]} scale={[1, 1.15, 0.9]} castShadow receiveShadow>
+      {/* Tear-drop shape breasts (tapered) */}
+      <mesh position={[-xOffset, yOffset, zOffset]} scale={[1, 1.2, 0.8]} castShadow receiveShadow>
         <sphereGeometry args={[chestScale, 32, 32]} />
-        <SkinShader color={skinColor} />
+        <HumanSkin color={skinColor} />
         {!hasTop && (
-          <mesh position={[0, 0, chestScale - 0.005]} scale={[1, 1, 0.1]}>
+          <mesh position={[0, 0, chestScale - 0.01]} scale={[1, 1, 0.1]}>
             <sphereGeometry args={[0.02, 16, 16]} />
-            <meshStandardMaterial color={skinColor.clone().multiplyScalar(0.6)} roughness={0.7} />
+            <meshStandardMaterial color={skinColor.clone().multiplyScalar(0.6)} roughness={0.9} />
           </mesh>
         )}
       </mesh>
-      <mesh position={[xOffset, yOffset, zOffset]} scale={[1, 1.15, 0.9]} castShadow receiveShadow>
+      <mesh position={[xOffset, yOffset, zOffset]} scale={[1, 1.2, 0.8]} castShadow receiveShadow>
         <sphereGeometry args={[chestScale, 32, 32]} />
-        <SkinShader color={skinColor} />
+        <HumanSkin color={skinColor} />
         {!hasTop && (
-          <mesh position={[0, 0, chestScale - 0.005]} scale={[1, 1, 0.1]}>
+          <mesh position={[0, 0, chestScale - 0.01]} scale={[1, 1, 0.1]}>
             <sphereGeometry args={[0.02, 16, 16]} />
-            <meshStandardMaterial color={skinColor.clone().multiplyScalar(0.6)} roughness={0.7} />
+            <meshStandardMaterial color={skinColor.clone().multiplyScalar(0.6)} roughness={0.9} />
           </mesh>
         )}
       </mesh>
+    </group>
+  );
+}
+
+function Genitalia({ type, skinColor, clothingType }: { type: string; skinColor: THREE.Color; clothingType: string; }) {
+  if (clothingType !== "none") return null;
+  const innerColor = skinColor.clone().multiplyScalar(0.7).add(new THREE.Color(0.1, 0, 0.05));
+  const scaleMap: Record<string, [number, number, number]> = {
+    type_1: [0.04, 0.13, 0.03], type_2: [0.08, 0.18, 0.06], type_3: [0.03, 0.11, 0.05],
+    type_4: [0.05, 0.15, 0.02], type_5: [0.06, 0.13, 0.08], type_6: [0.09, 0.12, 0.05],
+  };
+  const currentScale = scaleMap[type] || scaleMap.type_1;
+  return (
+    <group position={[0, 0.38, 0.32]} rotation={[-0.2, 0, 0]}>
+      <mesh castShadow receiveShadow scale={currentScale}><sphereGeometry args={[1, 32, 32]} /><HumanSkin color={skinColor} /></mesh>
+      <mesh position={[0, 0, 0.005]} scale={[currentScale[0] * 0.5, currentScale[1] * 0.8, 0.01]}><sphereGeometry args={[1, 16, 16]} /><meshStandardMaterial color={innerColor} roughness={0.5} /></mesh>
+    </group>
+  );
+}
+
+function PubicHair({ clothingType, torsoScale, hairColor }: { clothingType: string; torsoScale: [number, number, number]; hairColor: string; }) {
+  if (clothingType !== "none") return null;
+  return (
+    <group position={[0, 0.42, 0.34]} scale={[torsoScale[0] * 0.8, 1, 1]} rotation={[-0.1, 0, 0]}>
+       {/* Procedural Cluster instead of a rectangle */}
+       <mesh><circleGeometry args={[0.2, 32]} /><meshStandardMaterial color={hairColor} transparent opacity={0.6} /></mesh>
+       <mesh position={[0, 0.05, 0.01]}><circleGeometry args={[0.15, 32]} /><meshStandardMaterial color={hairColor} transparent opacity={0.4} /></mesh>
     </group>
   );
 }
@@ -98,18 +118,21 @@ function Chest({ size, skinColor, torsoWeight, clothingType }: { size: number; s
 function Head({ eyeColor, skinColor }: { eyeColor: string; skinColor: THREE.Color }) {
   const colorMap: Record<string, string> = { brown: "#4b2316", blue: "#1e90ff", green: "#2e8b57", hazel: "#8b7355", gray: "#708090" };
   return (
-    <group position={[0, 1.55, 0]}>
-      <mesh scale={[0.8, 1.1, 0.85]} castShadow receiveShadow>
+    <group position={[0, 1.45, 0]}>
+      {/* More realistic head shape */}
+      <mesh scale={[0.85, 1.1, 0.9]} castShadow receiveShadow>
         <sphereGeometry args={[0.28, 32, 32]} />
-        <SkinShader color={skinColor} />
+        <HumanSkin color={skinColor} />
       </mesh>
-      <mesh position={[0, -0.15, 0.05]} scale={[0.6, 0.4, 0.5]} rotation={[0.4, 0, 0]}>
+      {/* Jawline fusion */}
+      <mesh position={[0, -0.12, 0.05]} scale={[0.7, 0.4, 0.6]} rotation={[0.4, 0, 0]}>
          <sphereGeometry args={[0.2, 16, 16]} />
-         <SkinShader color={skinColor} />
+         <HumanSkin color={skinColor} />
       </mesh>
-      <group position={[0, 0.04, 0.25]}>
-         <mesh position={[-0.09, 0, 0]} scale={[1, 1, 0.1]}><sphereGeometry args={[0.04, 16, 16]} /><meshStandardMaterial color={colorMap[eyeColor]} roughness={0} metalness={1} /></mesh>
-         <mesh position={[0.09, 0, 0]} scale={[1, 1, 0.1]}><sphereGeometry args={[0.04, 16, 16]} /><meshStandardMaterial color={colorMap[eyeColor]} roughness={0} metalness={1} /></mesh>
+      {/* Realistic eyes */}
+      <group position={[0, 0.05, 0.25]}>
+         <mesh position={[-0.09, 0, 0]} scale={[1, 1, 0.1]}><sphereGeometry args={[0.04, 16, 16]} /><meshStandardMaterial color={colorMap[eyeColor]} roughness={0} metalness={0.9} /></mesh>
+         <mesh position={[0.09, 0, 0]} scale={[1, 1, 0.1]}><sphereGeometry args={[0.04, 16, 16]} /><meshStandardMaterial color={colorMap[eyeColor]} roughness={0} metalness={0.9} /></mesh>
       </group>
     </group>
   );
@@ -117,27 +140,19 @@ function Head({ eyeColor, skinColor }: { eyeColor: string; skinColor: THREE.Colo
 
 function Legs({ skinColor }: { skinColor: THREE.Color }) {
   return (
-    <group position={[0, -0.5, 0]}>
-      <mesh position={[-0.18, 0, 0]} rotation={[0, 0, 0.05]} castShadow receiveShadow><capsuleGeometry args={[0.13, 0.6, 16, 32]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[0.18, 0, 0]} rotation={[0, 0, -0.05]} castShadow receiveShadow><capsuleGeometry args={[0.13, 0.6, 16, 32]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[-0.18, -0.6, 0]} rotation={[0, 0, 0.02]} castShadow receiveShadow><capsuleGeometry args={[0.08, 0.5, 12, 24]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[0.18, -0.6, 0]} rotation={[0, 0, -0.02]} castShadow receiveShadow><capsuleGeometry args={[0.08, 0.5, 12, 24]} /><SkinShader color={skinColor} /></mesh>
-    </group>
-  );
-}
-
-function Arms({ skinColor }: { skinColor: THREE.Color }) {
-  return (
-    <group position={[0, 1, 0]}>
-      <mesh position={[-0.35, 0, 0]}><sphereGeometry args={[0.1, 16, 16]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[0.35, 0, 0]}><sphereGeometry args={[0.1, 16, 16]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[-0.45, -0.15, 0]} rotation={[0, 0, 0.15]}><capsuleGeometry args={[0.06, 0.4, 8, 24]} /><SkinShader color={skinColor} /></mesh>
-      <mesh position={[0.45, -0.15, 0]} rotation={[0, 0, -0.15]}><capsuleGeometry args={[0.06, 0.4, 8, 24]} /><SkinShader color={skinColor} /></mesh>
+    <group position={[0, 0.25, 0]}> 
+      {/* Fused to hips - moved UP */}
+      <mesh position={[-0.16, -0.1, 0]} rotation={[0, 0, 0.05]} castShadow receiveShadow><capsuleGeometry args={[0.13, 0.7, 16, 32]} /><HumanSkin color={skinColor} /></mesh>
+      <mesh position={[0.16, -0.1, 0]} rotation={[0, 0, -0.05]} castShadow receiveShadow><capsuleGeometry args={[0.13, 0.7, 16, 32]} /><HumanSkin color={skinColor} /></mesh>
+      {/* Lower Legs */}
+      <mesh position={[-0.16, -0.8, 0]} rotation={[0, 0, 0.02]} castShadow receiveShadow><capsuleGeometry args={[0.09, 0.6, 12, 24]} /><HumanSkin color={skinColor} /></mesh>
+      <mesh position={[0.16, -0.8, 0]} rotation={[0, 0, -0.02]} castShadow receiveShadow><capsuleGeometry args={[0.09, 0.6, 12, 24]} /><HumanSkin color={HumanSkin} /></mesh>
     </group>
   );
 }
 
 export default function BaseModel({ customization }: BaseModelProps) {
+  const groupRef = useRef<Group>(null);
   const skinColor = useMemo(() => {
      const base = SKIN_PRESETS[customization.ethnicity.preset] || SKIN_PRESETS.caucasian;
      const color = new THREE.Color(base);
@@ -146,15 +161,17 @@ export default function BaseModel({ customization }: BaseModelProps) {
      return color;
   }, [customization.ethnicity.preset, customization.ethnicity.skinTone]);
 
+  const hairColorValue = HAIR_COLORS[customization.hair.color] || HAIR_COLORS.black;
   const heightScale = 0.9 + (customization.body.height / 100) * 0.2;
   const weightScale = 0.8 + (customization.body.weight / 100) * 0.6;
 
   return (
-    <group scale={[heightScale, heightScale, heightScale]} position={[0, -0.3, 0]}>
+    <group scale={[heightScale, heightScale, heightScale]} position={[0, -0.4, 0]}>
       <Head eyeColor={customization.eyes.color} skinColor={skinColor} />
-      <Arms skinColor={skinColor} />
       <Torso scale={[weightScale, 1, 1]} color={skinColor} />
       <Chest size={customization.chest.size} skinColor={skinColor} torsoWeight={weightScale} clothingType={customization.clothing.type} />
+      <Genitalia type={customization.anatomy.vaginaType} skinColor={skinColor} clothingType={customization.clothing.type} />
+      <PubicHair clothingType={customization.clothing.type} torsoScale={[weightScale, 1, 1]} hairColor={hairColorValue} />
       <Legs skinColor={skinColor} />
     </group>
   );
