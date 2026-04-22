@@ -10,11 +10,15 @@ interface BaseModelProps {
   customization: CustomizationState;
 }
 
-// Professional High-Poly Human Mesh
-const MODEL_URL = "https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/woman/model.gltf";
+// 10.7MB Professional Scanned Human Mesh (Tran Thi Ngoc Tham)
+const MODEL_URL = "https://raw.githubusercontent.com/hmthanh/3d-human-model/main/TranThiNgocTham.glb";
 
 const SKIN_PRESETS: Record<string, string> = {
-  caucasian: "#f2d1c9", african: "#3d2b1f", east_asian: "#f3e5ab", south_asian: "#a67b5b", latin: "#c68642",
+  caucasian: "#f2d1c9", 
+  african: "#3d2b1f", 
+  east_asian: "#f3e5ab", 
+  south_asian: "#a67b5b", 
+  latin: "#c68642",
 };
 
 export default function BaseModel({ customization }: BaseModelProps) {
@@ -30,32 +34,77 @@ export default function BaseModel({ customization }: BaseModelProps) {
      return color;
   }, [customization.ethnicity.preset, customization.ethnicity.skinTone]);
 
+  // Hyper-Realistic Skin Shader Setup
   useEffect(() => {
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
-        mesh.material = new THREE.MeshPhysicalMaterial({
-          color: skinColor,
-          roughness: 0.5,
-          clearcoat: 0.4,
-          clearcoatRoughness: 0.2,
-          sheen: 1,
-          sheenColor: "#ffffff",
-        });
+        
+        // Ensure we preserve textures if they exist, but enhance with physical properties
+        if (mesh.material) {
+          const oldMat = mesh.material as THREE.MeshStandardMaterial;
+          
+          mesh.material = new THREE.MeshPhysicalMaterial({
+            map: oldMat.map,
+            normalMap: oldMat.normalMap,
+            roughnessMap: oldMat.roughnessMap,
+            color: skinColor,
+            roughness: 0.4,
+            metalness: 0.0,
+            reflectivity: 0.5,
+            clearcoat: 0.3,
+            clearcoatRoughness: 0.2,
+            sheen: 0.8,
+            sheenColor: new THREE.Color("#ffdbd1"),
+            transmission: 0.02,
+            thickness: 0.5,
+          });
+        }
+        
         mesh.castShadow = true;
         mesh.receiveShadow = true;
       }
     });
   }, [scene, skinColor]);
 
+  // Advanced Customization: Hair & Eyes
   useEffect(() => {
-    if (actions && actions["idle"]) {
-      actions["idle"].fadeIn(0.5).play();
-    }
-  }, [actions]);
+     scene.traverse((child) => {
+       const name = child.name.toLowerCase();
+       if (name.includes("hair")) {
+         const mesh = child as THREE.Mesh;
+         if (mesh.material) {
+            (mesh.material as THREE.MeshPhysicalMaterial).color = new THREE.Color(customization.hair.color);
+         }
+       }
+       if (name.includes("eye") || name.includes("iris")) {
+         const mesh = child as THREE.Mesh;
+          if (mesh.material) {
+            (mesh.material as THREE.MeshPhysicalMaterial).color = new THREE.Color(customization.eyes.color);
+         }
+       }
+     });
+  }, [scene, customization.hair.color, customization.eyes.color]);
 
-  const heightScale = 0.95 + (customization.body.height / 100) * 0.15;
-  const weightScale = 0.9 + (customization.body.weight / 100) * 0.3;
+  // Animation Engine
+  useEffect(() => {
+    if (actions) {
+      const animationName = customization.animation.pose || "idle";
+      const action = actions[animationName] || Object.values(actions)[0];
+      
+      if (action) {
+        // Stop all other actions
+        Object.values(actions).forEach(a => {
+          if (a && a !== action) a.fadeOut(0.5);
+        });
+        action.reset().fadeIn(0.5).play();
+      }
+    }
+  }, [actions, customization.animation.pose]);
+
+  // Anatomical Scaling (Body Types)
+  const heightScale = 0.9 + (customization.body.height / 100) * 0.2;
+  const weightScale = 0.85 + (customization.body.weight / 100) * 0.3;
 
   return (
     <group ref={group}>
