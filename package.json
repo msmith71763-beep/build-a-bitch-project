@@ -1,5 +1,7 @@
 {
   "name": "build-a-bitch-static",
   "version": "1.0.0",
-  "private": true
+  "scripts": {
+    "build": "mkdir -p dist && cp index.html dist/index.html"
+  }
 }
