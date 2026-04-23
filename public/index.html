@@ -80,7 +80,6 @@
         const skinMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
         const hairMat = new THREE.MeshStandardMaterial({ roughness: 0.8 });
         const loader = new THREE.GLTFLoader();
-        // Using the 2.8MB model which is much more stable for mobile load
         loader.load('https://raw.githubusercontent.com/PacktPublishing/Hands-On-Game-Animation-Programming/master/AllChapters/Assets/Woman.gltf', (gltf) => {
             model = gltf.scene;
             model.traverse(child => {
@@ -119,7 +118,7 @@
             if (current.fields) {
                 current.fields.forEach(f => {
                     const div = document.createElement('div'); div.className = 'group';
-                    div.innerHTML = `<div class="label"><span>${f}</span><span>${state[activeCat][f]}%</span></div>
+                    div.innerHTML = `<div class="label"><span>${f.toUpperCase()}</span><span>${state[activeCat][f]}%</span></div>
                                      <input type="range" min="0" max="100" value="${state[activeCat][f]}" oninput="state.${activeCat}.${f}=parseInt(this.value); renderUI();">`;
                     ctrls.appendChild(div);
                 });
