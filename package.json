@@ -1,7 +1,0 @@
-{
-  "name": "build-a-bitch-static",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "mkdir -p .next && touch .next/index.html"
-  }
-}

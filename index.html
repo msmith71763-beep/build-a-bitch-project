@@ -172,11 +172,9 @@
         renderUI();
 
         window.onresize = () => {
-            const w = window.innerWidth > 768 ? window.innerWidth - 320 : window.innerWidth;
-            const h = window.innerWidth > 768 ? window.innerHeight : window.innerHeight * 0.6;
-            renderer.setSize(w, h);
-            camera.aspect = w / h;
+            camera.aspect = viewport.clientWidth / viewport.clientHeight;
             camera.updateProjectionMatrix();
+            renderer.setSize(viewport.clientWidth, viewport.clientHeight);
         };
     </script>
 </body>
